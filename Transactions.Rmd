@@ -7,7 +7,7 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
-```{r, fig.width=5, fig.height=3}
+```{r, fig.width=10, fig.height=6}
 # Load libraries
 library(dplyr)
 library(tidyr)
@@ -54,7 +54,11 @@ plot3 <- ggplot(pay.df, aes(x = Month, y = Efficiency, group = Efficiency)) +
   geom_text(vjust = -0.2, aes(y = Efficiency, label = round(Efficiency,0))) +
   geom_line(aes(group=1))
 
-grid.arrange(plot1, plot2, plot3, nrow=3)
+payplots <- grid.arrange(plot1, plot2, plot3, nrow=3)
+
+ggsave(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 10, height = 6)
+
+payplots
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
