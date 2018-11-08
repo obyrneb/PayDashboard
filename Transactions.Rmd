@@ -79,7 +79,7 @@ plot1 <- ggplot(pay.df, aes(x = month, y = processed, group = processed)) +
   scale_y_continuous(limits = c(0,NA), labels = comma, expand = expand_scale(mult = c(0,.15))) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y") +
   #geom_bar(stat = "identity", aes(y = processed)) +
-  geom_hline(yintercept = 80000, linetype = 2, colour = "grey45") +
+  geom_hline(yintercept = 80000, linetype = 2, colour = "grey45", alpha = 0.5) +
   geom_path(aes(group=1), size = 1, colour = processed.clr, alpha = 0.5) +
   geom_point(colour = processed.clr) +
   geom_text(vjust = -0.5, size = 3, colour = "grey45", aes(y = processed, label = comma(processed))) +
@@ -104,7 +104,7 @@ plot2 <- ggplot(pay.df, aes(x = month, y = staff_imp, group = staff)) +
 
 # Create a graph of transactions per staff (efficiency) by month
 plot3 <- ggplot(pay.df, aes(x = month, y = efficiency_imp, group = efficiency_imp)) +
-  labs(title = "C - Transactions processed per FTE") +
+  labs(title = "C - Transactions processed per FTE (A divided by B)") +
   xlab("Month") +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y") +
@@ -114,16 +114,19 @@ plot3 <- ggplot(pay.df, aes(x = month, y = efficiency_imp, group = efficiency_im
   theme_TBS()
 
 title.grb <- textGrob("Efficiency of Transaction Processing at the Pay Centre", hjust = 0.72, gp=gpar(fontsize=16, col ="grey45"))
+subtitle.grb <- textGrob("Transaction data is from monthly pay centre updates. FTE data is from public statements, pay centre updates and other data received from PSPC. \nIn months where FTE data is unavailable, values were imputed based on a linear function and are used to calculate the efficiency curve for those months.", 
+                         x = unit(0.018,"npc"), 
+                         just = "left", gp=gpar(fontsize=8, col ="grey45", fontface = "plain"))
 divide.grb <- textGrob("÷",gp=gpar(fontsize=24, col ="grey45"))
 equals.grb <- textGrob("=",gp=gpar(fontsize=24, col ="grey45"))
 
 #payplots <- grid.arrange(plot1, plot2, plot3, nrow=3)
 
-payplots <- plot_grid(title.grb, plot1, divide.grb, plot2, equals.grb, plot3, #labels = c("","a","","b","","c"),
-                      align = "v", nrow = 6, rel_heights = c(1, 8, 1, 8, 1, 8))
+payplots <- plot_grid(title.grb, subtitle.grb, plot1, divide.grb, plot2, equals.grb, plot3, #labels = c("","a","","b","","c"),
+                      align = "v", nrow = 7, rel_heights = c(1, 1.5, 8, 1, 8, 1, 8))
 
 #save_plot(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 8, height = 6)
-#ggsave(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 8, height = 6)
+ggsave(plot = payplots, "Efficiency of Transaction Processing at the Pay Centre (May 2017 - Sep 2018).pdf", width = 8, height = 8)
 
 
 payplots
