@@ -7,7 +7,7 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
-```{r, fig.width=10, fig.height=6}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=8, fig.height=8}
 # Load libraries
 library(dplyr)
 library(tidyr)
@@ -15,48 +15,116 @@ library(ggplot2)
 library(readxl)
 library(grid)
 library(gridExtra)
+library(cowplot)
+library(scales)
+
+theme_TBS <- function(textSize = 8) {
+  theme(
+    plot.title = element_text(size = textSize*1.618, hjust = 0, colour = "grey45", face = "plain"),
+    plot.subtitle = element_text(face = "plain", size = textSize, colour = "grey45"),
+    plot.caption = element_text(face = "italic", size = textSize-1, colour = "grey45"),
+    #axis.title.x = element_text(size = textSize, colour = "grey45"),
+    axis.title = element_blank(),
+    axis.text.x = element_text(angle = 0, size = textSize, colour = "grey45", 
+                               inherit.blank = FALSE),
+    #axis.text.y = element_text(angle = 0, size = textSize-2, colour = "grey45", 
+    #                           inherit.blank = FALSE),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.background = element_rect(fill = "grey95"),
+    panel.grid = element_blank(),
+    panel.grid.major.x = element_line(colour = "white"),
+    panel.spacing.y = unit(2, "mm"),
+    panel.spacing.x = unit(1, "mm"),
+    strip.text.y = element_text(angle = 0, size = textSize, colour = "grey45", 
+                                inherit.blank = FALSE),
+    strip.text.x = element_text(angle = 180, size = textSize, colour = "grey45", 
+                                inherit.blank = FALSE),
+    strip.background = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = textSize, colour = "grey45"),
+    legend.title = element_blank(),
+    axis.line = element_blank()
+  )
+}
+
+title_theme <- calc_element("plot.title", theme_TBS())
+
+
 
 # Read data and create pay dataframe
 pay.df <- read_xlsx("datasets//dashboard_data.xlsx")
 
 # Remove line breay from date, add day (the 15th) and transfrom into a date object
-pay.df$Month <- gsub("\r?\n|\r", " ", pay.df$Month)
-pay.df$Month <- as.Date(paste0("15 ", pay.df$Month), "%d %B %Y")
+pay.df$month <- gsub("\r?\n|\r", " ", pay.df$month)
+pay.df$month <- as.Date(paste0("01 ", pay.df$month), "%d %B %Y")
 
 # Select columns and create Efficiency column (Processed transactions / Staff)
 pay.df <- pay.df %>%
-  select(Month, Backlog, Received, Processed, Staff) %>%
-  mutate(Efficiency = Processed / Staff)
+  select(month, backlog, received, processed, staff, staff_imp) %>%
+  mutate(efficiency = processed / staff) %>%
+  mutate(efficiency_imp = processed / staff_imp)
+  
+# Set colours
+processed.clr <- "#63CECA"
+staff.clr <- "#CD202C"
+efficiency.clr <- "#005172"
 
 # Create a graph of transactions processed by month.
 # Add a dashed line indicating the "regular workload" of 80,000 cases per month
-plot1 <- ggplot(pay.df, aes(x = Month, y = Processed, group = Processed)) +
-  scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
+plot1 <- ggplot(pay.df, aes(x = month, y = processed, group = processed)) +
+  labs(title = "A - Transactions processed") +
+  xlab("Month") +
+  scale_y_continuous(limits = c(0,NA), labels = comma, expand = expand_scale(mult = c(0,.15))) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y") +
-  #geom_bar(stat = "identity", aes(y = Processed)) +
-  geom_hline(yintercept = 80000, linetype = 2) +
-  geom_text(vjust = -0.2, aes(y = Processed, label = round(Processed,0))) +
-  geom_line(aes(group=1))
+  #geom_bar(stat = "identity", aes(y = processed)) +
+  geom_hline(yintercept = 80000, linetype = 2, colour = "grey45") +
+  geom_path(aes(group=1), size = 1, colour = processed.clr, alpha = 0.5) +
+  geom_point(colour = processed.clr) +
+  geom_text(vjust = -0.5, size = 3, colour = "grey45", aes(y = processed, label = comma(processed))) +
+  annotate("text", hjust = 0.3, vjust = 1.2, size = 3, colour = "grey45",
+           y = 80000, 
+           x = as.Date("2017-05-02"), 
+           label = "Normal workload of \n80,000 transactions") +
+  theme_TBS()
 
 # Create a graph of staff levels per month.
 # Values are not available for every month.
 # Some have been imputed using a simple linear function.
-plot2 <- ggplot(pay.df, aes(x = Month, y = Staff, group = Staff)) +
+plot2 <- ggplot(pay.df, aes(x = month, y = staff_imp, group = staff)) +
+  labs(title = "B - FTEs processing transactions") +
+  xlab("Month") +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y") +
-  geom_text(vjust = -0.2, aes(y = Staff, label = round(Staff,0))) +
-  geom_line(aes(group=1))
+  geom_path(aes(group=1), size = 1, colour = staff.clr, alpha = 0.5) +
+  geom_point(aes(y = staff), colour = staff.clr) + 
+  geom_text(vjust = -0.5, size = 3, colour = "grey45", aes(y = staff, label = round(staff,0))) +
+  theme_TBS()
 
-# Create a graph of transactions per staff (Efficiency) by month
-plot3 <- ggplot(pay.df, aes(x = Month, y = Efficiency, group = Efficiency)) +
+# Create a graph of transactions per staff (efficiency) by month
+plot3 <- ggplot(pay.df, aes(x = month, y = efficiency_imp, group = efficiency_imp)) +
+  labs(title = "C - Transactions processed per FTE") +
+  xlab("Month") +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y") +
-  geom_text(vjust = -0.2, aes(y = Efficiency, label = round(Efficiency,0))) +
-  geom_line(aes(group=1))
+  geom_path(aes(group=1), size = 1, colour = efficiency.clr, alpha = 0.5) +
+  geom_point(aes(y = efficiency), colour = efficiency.clr) +
+  geom_text(vjust = -0.5, size = 3, colour = "grey45", aes(y = efficiency, label = round(efficiency,0))) +
+  theme_TBS()
 
-payplots <- grid.arrange(plot1, plot2, plot3, nrow=3)
+title.grb <- textGrob("Efficiency of Transaction Processing at the Pay Centre", hjust = 0.72, gp=gpar(fontsize=16, col ="grey45"))
+divide.grb <- textGrob("÷",gp=gpar(fontsize=24, col ="grey45"))
+equals.grb <- textGrob("=",gp=gpar(fontsize=24, col ="grey45"))
 
-ggsave(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 10, height = 6)
+#payplots <- grid.arrange(plot1, plot2, plot3, nrow=3)
+
+payplots <- plot_grid(title.grb, plot1, divide.grb, plot2, equals.grb, plot3, #labels = c("","a","","b","","c"),
+                      align = "v", nrow = 6, rel_heights = c(1, 8, 1, 8, 1, 8))
+
+#save_plot(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 8, height = 6)
+#ggsave(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 8, height = 6)
+
 
 payplots
 ```
@@ -70,11 +138,11 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 ```{r, fig.width = 3, fig.height = 3}
 # Create a scatterplot graphing processed vs received transactions.
 # Why do we tend to see more transactions processed when more are received?
-plot4 <- ggplot(pay.df, aes(x = Received, y = Processed)) +
+plot4 <- ggplot(pay.df, aes(x = received, y = processed)) +
   geom_point() +
   geom_smooth(method=lm)
 
-res <- cor.test(pay.df$Received, pay.df$Processed, 
+res <- cor.test(pay.df$received, pay.df$processed, 
                     method = "pearson")
 res
 
