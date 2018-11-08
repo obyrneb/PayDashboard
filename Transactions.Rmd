@@ -6,8 +6,7 @@ output: html_notebook
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=8, fig.height=8}
+```{r}
 # Load libraries
 library(dplyr)
 library(tidyr)
@@ -51,8 +50,6 @@ theme_TBS <- function(textSize = 8) {
 
 title_theme <- calc_element("plot.title", theme_TBS())
 
-
-
 # Read data and create pay dataframe
 pay.df <- read_xlsx("datasets//dashboard_data.xlsx")
 
@@ -60,8 +57,12 @@ pay.df <- read_xlsx("datasets//dashboard_data.xlsx")
 pay.df$month <- gsub("\r?\n|\r", " ", pay.df$month)
 pay.df$month <- as.Date(paste0("01 ", pay.df$month), "%d %B %Y")
 
+```
+
+This code chunk creates an efficiency visualization using three graphs.
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=8, fig.height=8}
 # Select columns and create Efficiency column (Processed transactions / Staff)
-pay.df <- pay.df %>%
+pay_eff.df <- pay.df %>%
   select(month, backlog, received, processed, staff, staff_imp) %>%
   mutate(efficiency = processed / staff) %>%
   mutate(efficiency_imp = processed / staff_imp)
@@ -73,7 +74,7 @@ efficiency.clr <- "#005172"
 
 # Create a graph of transactions processed by month.
 # Add a dashed line indicating the "regular workload" of 80,000 cases per month
-plot1 <- ggplot(pay.df, aes(x = month, y = processed, group = processed)) +
+plot1 <- ggplot(pay_eff.df, aes(x = month, y = processed, group = processed)) +
   labs(title = "A - Transactions processed") +
   xlab("Month") +
   scale_y_continuous(limits = c(0,NA), labels = comma, expand = expand_scale(mult = c(0,.15))) +
@@ -92,7 +93,7 @@ plot1 <- ggplot(pay.df, aes(x = month, y = processed, group = processed)) +
 # Create a graph of staff levels per month.
 # Values are not available for every month.
 # Some have been imputed using a simple linear function.
-plot2 <- ggplot(pay.df, aes(x = month, y = staff_imp, group = staff)) +
+plot2 <- ggplot(pay_eff.df, aes(x = month, y = staff_imp, group = staff)) +
   labs(title = "B - FTEs processing transactions") +
   xlab("Month") +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
@@ -103,7 +104,7 @@ plot2 <- ggplot(pay.df, aes(x = month, y = staff_imp, group = staff)) +
   theme_TBS()
 
 # Create a graph of transactions per staff (efficiency) by month
-plot3 <- ggplot(pay.df, aes(x = month, y = efficiency_imp, group = efficiency_imp)) +
+plot3 <- ggplot(pay_eff.df, aes(x = month, y = efficiency_imp, group = efficiency_imp)) +
   labs(title = "C - Transactions processed per FTE (A divided by B)") +
   xlab("Month") +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.15))) +
@@ -113,26 +114,53 @@ plot3 <- ggplot(pay.df, aes(x = month, y = efficiency_imp, group = efficiency_im
   geom_text(vjust = -0.5, size = 3, colour = "grey45", aes(y = efficiency, label = round(efficiency,0))) +
   theme_TBS()
 
+# Set title and subtitle for combined graph
 title.grb <- textGrob("Efficiency of Transaction Processing at the Pay Centre", hjust = 0.72, gp=gpar(fontsize=16, col ="grey45"))
 subtitle.grb <- textGrob("Transaction data is from monthly pay centre updates. FTE data is from public statements, pay centre updates and other data received from PSPC. \nIn months where FTE data is unavailable, values were imputed based on a linear function and are used to calculate the efficiency curve for those months.", 
                          x = unit(0.018,"npc"), 
                          just = "left", gp=gpar(fontsize=8, col ="grey45", fontface = "plain"))
+
+# Divide and equals signs for the combined graph
 divide.grb <- textGrob("÷",gp=gpar(fontsize=24, col ="grey45"))
 equals.grb <- textGrob("=",gp=gpar(fontsize=24, col ="grey45"))
 
-#payplots <- grid.arrange(plot1, plot2, plot3, nrow=3)
-
+# Create combined graph using cowplots library
 payplots <- plot_grid(title.grb, subtitle.grb, plot1, divide.grb, plot2, equals.grb, plot3, #labels = c("","a","","b","","c"),
                       align = "v", nrow = 7, rel_heights = c(1, 1.5, 8, 1, 8, 1, 8))
 
-#save_plot(plot = payplots, "Monthly Transaction Processing Efficiency.pdf", width = 8, height = 6)
+# Save combined plot
 ggsave(plot = payplots, "Efficiency of Transaction Processing at the Pay Centre (May 2017 - Sep 2018).pdf", width = 8, height = 8)
 
 
 payplots
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+This chunck creates a backlog graph
+# Code shading between two lines. Use this to construct receive vs processed
+df <- cbind(df,min_line=pmin(df[,2],df[,3]) ) 
+df <- melt(df, id.vars=c("Date","min_line"), variable.name="Assets", value.name="Prices")
+
+sp <- ggplot(data=df, aes(x=Date, fill=Assets))
+sp <- sp + geom_ribbon(aes(ymax=Prices, ymin=min_line))
+sp <- sp + scale_fill_manual(values=c(Stocks="darkred", Bonds="darkblue"))
+sp <- sp + ggtitle("Bonds Versus Stocks (Fake Data!)")
+plot(sp)
+
+```{r}
+
+pay_bklg.df <- pay.df %>%
+  select(month, received, processed) %>%
+  mutate(min = pmin(received, processed)) %>%
+  gather("status", "transactions", -month, -min)
+
+backlogplot <- ggplot(data=pay_bklg.df, aes(x=month, fill=status)) +
+  geom_ribbon(aes(ymax=transactions, ymin=min)) +
+  theme_TBS()
+  #scale_fill_manual(values=c(Stocks="darkred", Bonds="darkblue"))
+
+backlogplot
+
+```
 
 When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
 
