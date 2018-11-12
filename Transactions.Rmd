@@ -129,11 +129,14 @@ payplots <- plot_grid(title.grb, subtitle.grb, plot1, divide.grb, plot2, equals.
                       align = "v", nrow = 7, rel_heights = c(1, 1.5, 8, 1, 8, 1, 8))
 
 # Save combined plot
-ggsave(plot = payplots, "Efficiency of Transaction Processing at the Pay Centre (May 2017 - Sep 2018).pdf", width = 8, height = 8)
+ggsave(plot = payplots, "Efficiency-of-Transaction-Processing-at-the-Pay-Centre-(May2017-Sep2018).pdf", width = 8, height = 8)
 
 
 payplots
 ```
+
+![](/Efficiency-of-Transaction-Processing-at-the-Pay-Centre-(May2017-Sep2018).pdf)
+
 
 This chunck creates a backlog graph
 # Code shading between two lines. Use this to construct receive vs processed
@@ -150,11 +153,17 @@ plot(sp)
 
 pay_bklg.df <- pay.df %>%
   select(month, received, processed) %>%
-  mutate(min = pmin(received, processed)) %>%
-  gather("status", "transactions", -month, -min)
+  #mutate(delta = received-processed) %>%
+  #mutate(direction = ifelse(delta < 0, "decrease", "increase"))
+  mutate(min = pmin(received, processed))
+  
+deltas <- gather(data = pay_bklg.df, "status", "transactions", -month, -min)
 
-backlogplot <- ggplot(data=pay_bklg.df, aes(x=month, fill=status)) +
-  geom_ribbon(aes(ymax=transactions, ymin=min)) +
+backlogplot <- ggplot(data=pay_bklg.df, aes(x=month)) +
+  geom_area(aes(y = processed), colour = "green")) +
+  geom_ribbon(data = deltas, aes(ymax=transactions, ymin=min, fill=status)) +
+  geom_line(aes(y = processed), colour = "green") +
+  geom_line(aes(y = received), colour = "red") +
   theme_TBS()
   #scale_fill_manual(values=c(Stocks="darkred", Bonds="darkblue"))
 
