@@ -152,7 +152,7 @@ plot(sp)
 ```{r}
 
 pay_bklg.df <- pay.df %>%
-  select(month, received, processed) %>%
+  select(month, received, processed, backlog_fin) %>%
   #mutate(delta = received-processed) %>%
   #mutate(direction = ifelse(delta < 0, "decrease", "increase"))
   mutate(min = pmin(received, processed))
@@ -160,10 +160,13 @@ pay_bklg.df <- pay.df %>%
 deltas <- gather(data = pay_bklg.df, "status", "transactions", -month, -min)
 
 backlogplot <- ggplot(data=pay_bklg.df, aes(x=month)) +
-  geom_area(aes(y = processed), colour = "green")) +
-  geom_ribbon(data = deltas, aes(ymax=transactions, ymin=min, fill=status)) +
-  geom_line(aes(y = processed), colour = "green") +
-  geom_line(aes(y = received), colour = "red") +
+  geom_area(aes(y = backlog_fin), fill = "grey60") +
+  #geom_ribbon(data = deltas, aes(ymax=transactions, ymin=min, fill=status)) +
+  geom_area(aes(y = received), fill = "red", alpha = 0.5) +
+  geom_area(aes(y = processed), fill = "blue", alpha = 0.5) +
+  geom_bar(data = filter(deltas, status != "backlog_fin"), 
+           aes(x = month, y = transactions, group = status, fill = status),
+           stat = "identity", position = "dodge") +
   theme_TBS()
   #scale_fill_manual(values=c(Stocks="darkred", Bonds="darkblue"))
 
