@@ -133,7 +133,74 @@ ggsave(plot = payplots, "Efficiency-of-Transaction-Processing-at-the-Pay-Centre-
 
 
 payplots
+knitr::include_graphics("Efficiency-of-Transaction-Processing-at-the-Pay-Centre-(May2017-Sep2018).pdf")
 ```
+
+This chunk creates a minigraph of the above
+```{r}
+
+miniEff.df <- pay_eff.df %>%
+  select(month, processed, staff_imp, efficiency_imp) %>%
+  filter(month != as.Date("2017-05-01")) %>%
+  gather("type","transactions",-month) %>%
+  mutate(type = factor(type, c("processed","staff_imp","efficiency_imp")))
+
+compare.df <- miniEff.df %>%
+  filter(month %in% c(as.Date("2017-06-01"),as.Date("2018-10-01")))
+
+miniEff <- ggplot(miniEff.df, aes(x=month, y=transactions, group=type)) +
+  labs(title = "Efficiency of Transaction Processing at the Pay Centre") +
+  geom_path(aes(group=type)) +
+  scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.20))) +
+  scale_x_date(date_labels="%b %Y", expand=c(0,30),
+               breaks=c(as.Date("2017-06-01"),as.Date("2018-01-01"),as.Date("2018-10-01"))) +
+  geom_point(data=compare.df, aes(x=month, y=transactions, group=type)) +
+  geom_text(data=compare.df, vjust = -0.5, size = 4,
+            aes(x=month, y=transactions, label=round(transactions,0))) +
+  geom_path(data=compare.df, colour="red", linetype=2, aes(group=type))+
+  facet_grid(type~., scales = "free_y", 
+             labeller = labeller(type=c(processed="Transactions \nProcessed (A)",
+                                        staff_imp="Pay Centre \nStaff (B)",
+                                        efficiency_imp="Transactions per \nStaff (A/B)")
+                                 )
+             ) +
+  theme(
+    strip.text.y = element_text(angle=0),
+    strip.background = element_blank(),
+    axis.title = element_blank()
+  )
+  
+miniEff
+```
+
+```{r}
+miniBacklog.df <- pay_eff.df %>%
+  select(month, backlog) %>%
+  filter(month != as.Date("2017-05-01"))
+
+miniBacklog_c.df <- miniBacklog.df %>%
+  filter(month %in% c(as.Date("2017-06-01"),as.Date("2018-10-01")))
+
+miniBacklog <- ggplot(miniBacklog.df, aes(x=month, y=backlog, group=backlog)) +
+  geom_path(aes(group=1)) +
+  labs(title = "Backlog of Pay Centre Transactions") +
+  scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.20)), labels=comma,
+                     breaks=c(0,100000,200000,300000,400000,500000,600000)) +
+  scale_x_date(date_labels="%b %Y", expand=c(0,30),
+               breaks=c(as.Date("2017-06-01"),as.Date("2018-01-01"),as.Date("2018-10-01"))) +
+  geom_point(data=miniBacklog_c.df, aes(x=month, y=backlog, group=backlog)) +
+  geom_text(data=miniBacklog_c.df, vjust = -0.5, size = 4,
+            aes(x=month, y=backlog, label=round(backlog,0))) +
+  geom_path(data=miniBacklog_c.df, colour="red", linetype=2, aes(group=1))+
+  theme(
+    strip.text.y = element_text(angle=0),
+    strip.background = element_blank(),
+    axis.title = element_blank()
+  )
+  
+miniBacklog
+```
+
 
 ![](/Efficiency-of-Transaction-Processing-at-the-Pay-Centre-(May2017-Sep2018).pdf)
 
