@@ -148,16 +148,26 @@ miniEff.df <- pay_eff.df %>%
 compare.df <- miniEff.df %>%
   filter(month %in% c(as.Date("2017-06-01"),as.Date("2018-10-01")))
 
+line80k.df <- miniEff.df %>%
+  filter(type == "processed") %>%
+  mutate(transactions = 80000)
+
+below80k.df <- miniEff.df %>%
+  filter(type == "processed" & transactions < 80000)
+
 miniEff <- ggplot(miniEff.df, aes(x=month, y=transactions, group=type)) +
   labs(title = "Efficiency of Transaction Processing at the Pay Centre") +
+  geom_smooth(colour = "black", fill = "grey90", size = 0.1) +
   geom_path(aes(group=type)) +
   scale_y_continuous(limits = c(0,NA), expand = expand_scale(mult = c(0,.20))) +
   scale_x_date(date_labels="%b %Y", expand=c(0,30),
                breaks=c(as.Date("2017-06-01"),as.Date("2018-01-01"),as.Date("2018-10-01"))) +
+  geom_path(data=line80k.df, aes(x=month, y=transactions, group=type), linetype = 3) +
+  geom_point(data=below80k.df, aes(x=month, y=transactions, group=type), colour = "red") +
   geom_point(data=compare.df, aes(x=month, y=transactions, group=type)) +
   geom_text(data=compare.df, vjust = -0.5, size = 4,
             aes(x=month, y=transactions, label=round(transactions,0))) +
-  geom_path(data=compare.df, colour="red", linetype=2, aes(group=type))+
+  geom_path(data=compare.df, colour="red", linetype=2, aes(group=type)) +
   facet_grid(type~., scales = "free_y", 
              labeller = labeller(type=c(processed="Transactions \nProcessed (A)",
                                         staff_imp="Pay Centre \nStaff (B)",
@@ -167,12 +177,13 @@ miniEff <- ggplot(miniEff.df, aes(x=month, y=transactions, group=type)) +
   theme(
     strip.text.y = element_text(angle=0),
     strip.background = element_blank(),
+    panel.spacing.y = unit(5,"mm"),
     axis.title = element_blank()
   )
   
 ggsave(plot = miniEff, "Efficiency-mini.png", width = 7, height = 5)
 
-miniEff
+knitr::include_graphics("Efficiency-mini.png")
 ```
 
 ```{r}
@@ -206,6 +217,7 @@ miniBacklog <- ggplot(miniBacklog.df, aes(x=month, y=number, group=type, linetyp
 ggsave(plot = miniBacklog, "Backlog-mini.png", width = 7, height = 4)
 
 miniBacklog
+knitr::include_graphics("Backlog-mini.png")
 ```
 
 
